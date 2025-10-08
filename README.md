@@ -1,4 +1,3 @@
-# Session-9-Tic-Tac-Toe-UI-Snap-
 # 🔹 Part 1 — Project & Rig Foundation (Meta-only) + Locomotion + Grab <span style="color:purple;font-weight:bold;">🟣 Session Homework</span>
 
 **Goal:** In a brand-new scene, drop **OVRPlayerController** for **locomotion**, add **controller rays** for UI, set up **grab** on a test cube, and prove clicks on a **world-space button**.
@@ -486,21 +485,12 @@ Directional Light
 
 <span style="color:purple;font-weight:bold;">🟣 Session Homework — complete every purple step</span>
 
-**Goal:** Clicking a cell places **X/O**, detects **win/tie**, shows a **Game Over** overlay, and **Restart** works.
+**Goal:** Clicking a cell places **X/O**, detects **win/tie**, shows a **Game Over** overlay, and **Restart** works. We will build a robust, data-driven system where the game logic is separate from the UI.
+
 **Where you’ll work:** `Assets/Scripts`, **Inspector** (BoardCanvas & Cells), **Hierarchy** (BoardCanvas/Grid), **Console** (optional logs).
 
 > ✅ Pre-flight: From Part 2 you already have
 > `Wall/BoardCanvas/Grid/Cell_0..Cell_8` (Button TMPs), and `BoardCanvas/GameOverPanel (disabled)/GameOverText/RestartButton`.
-
----
-
-## 0) Safety checks (must be true before you start) <span style="color:purple;">🟣</span>
-
-⬜ **0.1** You can hover & press the **Grid cells** with the ray (they highlight).
-⬜ **0.2** **GameOverPanel** exists but is **disabled** (unchecked in Hierarchy).
-⬜ **0.3** Each **Cell** has a **Button (TMP)** child with **Text (TMP)**.
-
-> If not, fix Part 2 first.
 
 ---
 
@@ -510,87 +500,74 @@ Directional Light
 ⬜ **1.2** Inside it, create two scripts:
 
 * **`GameController.cs`**
-* **`Space.cs`**
+* **`Cell.cs`** (Note: this is a different name than the previous `Space.cs`)
 
 ---
 
-## 2) Script #1 — `Space.cs` (the behaviour on each cell) <span style="color:purple;">🟣</span>
+## 2) Script #1 — `Cell.cs` (the behaviour on each cell) <span style="color:purple;">🟣</span>
 
-> This script lives on **every Cell**. It knows its **Button**, its **TMP text**, and it calls the **GameController** when clicked.
+> This script lives on **every Cell prefab**. It holds its **Button** and its **index (0-8)**. When clicked, it simply tells the `GameController` which cell was pressed. This approach simplifies wiring and centralizes logic.
 
 ### 2A) Paste this code
 
-⬜ **2.1** Open `Space.cs`, replace all with:
+⬜ **2.1** Open `Cell.cs`, replace all with:
 
 ```csharp
 using UnityEngine;
 using UnityEngine.UI;
-using TMPro;
 
 /// <summary>
-/// Lives on each grid cell (the Button). Handles a click:
-/// - Writes X or O into its TMP label
-/// - Disables its Button so it can't be clicked twice
-/// - Notifies GameController to process the turn
+/// Lives on each grid cell (the Button prefab).
+/// It knows its own index (0-8) and notifies the GameController when clicked.
 /// </summary>
-public class Space : MonoBehaviour
+[RequireComponent(typeof(Button))]
+public class Cell : MonoBehaviour
 {
-    [Header("Assign in Inspector (on the Cell prefab/instances)")]
-    public Button button;         // The UI Button on this Cell
-    public TMP_Text buttonText;   // The TMP label child of this Cell
+    private Button _button;
+    private GameController _gameController;
+    private int _cellIndex;
 
-    private GameController gameController;
-
-    /// <summary> Called by GameController once at start to connect references. </summary>
-    public void SetControllerReference(GameController control)
+    void Awake()
     {
-        gameController = control;
+        _button = GetComponent<Button>();
+        _button.onClick.AddListener(OnCellClicked);
     }
 
-    /// <summary> Hook this to the Button's OnClick() in the Inspector. </summary>
-    public void SetSpace()
+    /// <summary>
+    /// Called by the GameController during setup to establish a reference.
+    /// </summary>
+    public void Initialize(int index, GameController controller)
     {
-        // Safety: if wiring is missing, do nothing.
-        if (gameController == null || buttonText == null || button == null)
-            return;
+        _cellIndex = index;
+        _gameController = controller;
+    }
 
-        // If already marked (X or O), ignore second clicks.
-        if (!string.IsNullOrEmpty(buttonText.text))
-            return;
-
-        // Write the current player's mark and lock this cell.
-        buttonText.text = gameController.GetSide();
-        button.interactable = false;
-
-        // Tell the controller to evaluate win/tie and/or swap turns.
-        gameController.EndTurn();
+    /// <summary>
+    /// Handles the button click event.
+    /// </summary>
+    private void OnCellClicked()
+    {
+        // Notify the central controller that this cell was clicked.
+        if (_gameController != null)
+        {
+            _gameController.OnCellClicked(_cellIndex);
+        }
     }
 }
 ```
 
-### 2B) Put the script on all Cells (one action to rule them all)
+### 2B) Put the script on the Cell Prefab
 
-⬜ **2.2** **Hierarchy:** Select **all nine** `Cell_0..Cell_8`
-⬜ **2.3** **Inspector:** **Add Component → Space**
-⬜ **2.4** Still selected, drag their **own Button** component into **Space → Button**.
-⬜ **2.5** Still selected, expand each Cell → child **`Text (TMP)`** and drag it into **Space → Button Text**.
-
-> Tip: If the Cells are prefab instances, you can **Open the `Cell` prefab** and add **Space** once there (with Button/TMP assigned), then **Apply** so all instances inherit it.
-
-### 2C) Wire the click event
-
-⬜ **2.6** Select **all nine** Cells again → in **Button (component) → OnClick()**
-
-* Click **+**, drag **the same Cell** (the one with **Space**) into the object field
-* Choose **`Space → SetSpace()`**
-
-> ✅ Now each Cell knows how to write **X/O** when clicked and to notify the controller. Next, we build the controller.
+⬜ **2.2** **Project Window:** Go to `Assets/Prefabs` and double-click the **`Cell` prefab** to open it for editing.
+⬜ **2.3** **Inspector (Cell prefab):** **Add Component → Cell**.
+⬜ **2.4** Save the prefab. All nine instances in your scene will automatically get the script.
+> **Note:** We do not need to wire the `OnClick()` event in the Inspector manually! The `Awake()` method in `Cell.cs` handles this automatically.
 
 ---
 
 ## 3) Script #2 — `GameController.cs` (the brain) <span style="color:purple;">🟣</span>
 
-> This lives on a **single** scene object (we’ll make **SceneManager**). It holds references to the **9 cell labels**, the **GameOver** UI, and exposes simple methods the `Space` script calls.
+> This script lives on a **single** scene object (we’ll make a `GameManager`). It manages the entire game state: the board data, whose turn it is, win/tie conditions, and all UI updates.
 
 ### 3A) Paste this code
 
@@ -602,159 +579,178 @@ using UnityEngine.UI;
 using TMPro;
 
 /// <summary>
-/// Central game manager:
-/// - Knows the 9 cell labels (TMP_Text)
-/// - Tracks whose turn it is ("X" or "O")
-/// - Checks win/tie after each move
-/// - Shows GameOver UI and handles Restart
+/// Central game manager.
+/// - Manages the game state (board, turns, scores).
+/// - Handles all UI updates (cell text, game over panel, HUD).
+/// - Checks for win/tie conditions.
+/// - Responds to cell clicks and button presses.
 /// </summary>
 public class GameController : MonoBehaviour
 {
-    [Header("Board cell labels (size = 9, drag Text(TMP) from Cell_0..Cell_8)")]
-    public TMP_Text[] spaceList = new TMP_Text[9];
+    [Header("Board & Cells")]
+    [Tooltip("Drag the 9 Cell objects from the Hierarchy here, in order from 0 to 8.")]
+    public Button[] cellButtons = new Button[9]; // The 9 cell buttons from the grid.
 
-    [Header("Game Over UI on BoardCanvas")]
-    public GameObject gameOverPanel;   // BoardCanvas/GameOverPanel
-    public TMP_Text gameOverText;      // BoardCanvas/GameOverPanel/GameOverText
-    public Button restartButton;       // BoardCanvas/GameOverPanel/RestartButton
+    [Header("Game State")]
+    private int[] boardState = new int[9]; // 0=Empty, 1=X, 2=O
+    private int currentPlayer = 1; // 1 for X, 2 for O
+    private int movesMade = 0;
+    private bool isGameActive = true;
 
-    [Header("Scoring / points (optional for expansion)")]
-    public int pointsPerWin = 1;
+    [Header("UI Panels & Text")]
+    public GameObject gameOverPanel;
+    public TMP_Text gameOverText;
+    public Button restartButton;
 
-    private string side = "X"; // Current side to play
-    private int moves = 0;     // How many moves have been played
-
-    // All winning triplets (indexing spaceList)
-    private static readonly int[][] Wins = new int[][]
+    // Winning combinations (indices of the boardState array)
+    private readonly int[][] winConditions =
     {
-        new[]{0,1,2}, new[]{3,4,5}, new[]{6,7,8}, // rows
-        new[]{0,3,6}, new[]{1,4,7}, new[]{2,5,8}, // cols
-        new[]{0,4,8}, new[]{2,4,6}                // diagonals
+        new[] {0, 1, 2}, new[] {3, 4, 5}, new[] {6, 7, 8}, // Rows
+        new[] {0, 3, 6}, new[] {1, 4, 7}, new[] {2, 5, 8}, // Columns
+        new[] {0, 4, 8}, new[] {2, 4, 6}                  // Diagonals
     };
 
-    private void Start()
+    void Start()
     {
-        // 1) Ensure cells know who the controller is
-        SetGameControllerReferenceForButtons();
-
-        // 2) Reset UI & state
-        side = "X";
-        moves = 0;
-
-        if (gameOverPanel) gameOverPanel.SetActive(false);
-        if (restartButton) restartButton.gameObject.SetActive(false);
+        InitializeGame();
     }
 
-    /// <summary> Called by Space.SetSpace() to know what to write. </summary>
-    public string GetSide() => side;
-
-    /// <summary> Space calls this after it writes X/O. We evaluate game state. </summary>
-    public void EndTurn()
+    /// <summary>
+    /// Sets up the initial state of the game.
+    /// </summary>
+    private void InitializeGame()
     {
-        moves++;
-
-        if (WinCheck())
+        // 1. Setup Cell references
+        for (int i = 0; i < cellButtons.Length; i++)
         {
-            ShowGameOver($"{side} wins!");
-            return;
-        }
-
-        if (moves >= 9) // all cells filled, no winner
-        {
-            ShowGameOver("Tie!");
-            return;
-        }
-
-        // No winner yet -> next player's turn
-        ChangeSide();
-    }
-
-    /// <summary> Resets the whole board to start another game. Hook to RestartButton. </summary>
-    public void Restart()
-    {
-        side = "X";
-        moves = 0;
-
-        // Clear labels and re-enable buttons
-        for (int i = 0; i < spaceList.Length; i++)
-        {
-            if (spaceList[i]) spaceList[i].text = string.Empty;
-
-            // Get the Button from the Text's parent (the Cell)
-            var btn = spaceList[i] ? spaceList[i].GetComponentInParent<Button>() : null;
-            if (btn) btn.interactable = true;
-        }
-
-        if (gameOverPanel) gameOverPanel.SetActive(false);
-        if (restartButton) restartButton.gameObject.SetActive(false);
-    }
-
-    // ---------- Helpers below ----------
-
-    private void SetGameControllerReferenceForButtons()
-    {
-        // Each TMP label lives under a Cell that has the Space script.
-        for (int i = 0; i < spaceList.Length; i++)
-        {
-            if (!spaceList[i]) continue;
-
-            var space = spaceList[i].GetComponentInParent<Space>();
-            if (space != null)
+            Cell cell = cellButtons[i].GetComponent<Cell>();
+            if (cell != null)
             {
-                space.SetControllerReference(this);
-            }
-            else
-            {
-                Debug.LogWarning($"[GameController] No Space script found for index {i}. Check your Cell prefab/instances.");
+                cell.Initialize(i, this);
             }
         }
+
+        // 2. Add listener for the restart button
+        restartButton.onClick.AddListener(RestartGame);
+
+        // 3. Start the first game
+        RestartGame();
     }
 
-    private void ChangeSide()
+    /// <summary>
+    /// Resets the game to a fresh state.
+    /// </summary>
+    public void RestartGame()
     {
-        side = (side == "X") ? "O" : "X";
-    }
+        isGameActive = true;
+        currentPlayer = 1;
+        movesMade = 0;
 
-    private bool WinCheck()
-    {
-        for (int i = 0; i < Wins.Length; i++)
+        for (int i = 0; i < boardState.Length; i++)
         {
-            int a = Wins[i][0], b = Wins[i][1], c = Wins[i][2];
+            boardState[i] = 0; // Clear the internal board state
+            UpdateCellUI(i);
+            cellButtons[i].interactable = true;
+        }
 
-            // Safety: skip if any label missing
-            if (!spaceList[a] || !spaceList[b] || !spaceList[c]) continue;
+        gameOverPanel.SetActive(false);
+    }
 
-            if (spaceList[a].text == side &&
-                spaceList[b].text == side &&
-                spaceList[c].text == side)
+    /// <summary>
+    /// Called by a Cell when it is clicked.
+    /// </summary>
+    public void OnCellClicked(int cellIndex)
+    {
+        if (!isGameActive || boardState[cellIndex] != 0)
+        {
+            return; // Ignore clicks if game is over or cell is taken
+        }
+
+        // 1. Update internal state
+        boardState[cellIndex] = currentPlayer;
+        movesMade++;
+
+        // 2. Update the UI for the clicked cell
+        UpdateCellUI(cellIndex);
+        cellButtons[cellIndex].interactable = false;
+
+        // 3. Check for win or tie
+        if (CheckForWin())
+        {
+            EndGame(false);
+        }
+        else if (movesMade >= 9)
+        {
+            EndGame(true); // It's a tie
+        }
+        else
+        {
+            // 4. Switch player
+            currentPlayer = (currentPlayer == 1) ? 2 : 1;
+        }
+    }
+
+    /// <summary>
+    /// Checks all win conditions.
+    /// </summary>
+    private bool CheckForWin()
+    {
+        foreach (var condition in winConditions)
+        {
+            if (boardState[condition[0]] == currentPlayer &&
+                boardState[condition[1]] == currentPlayer &&
+                boardState[condition[2]] == currentPlayer)
+            {
                 return true;
+            }
         }
         return false;
     }
 
-    private void ShowGameOver(string message)
+    /// <summary>
+    /// Ends the current game and shows the game over UI.
+    /// </summary>
+    private void EndGame(bool isTie)
     {
-        if (gameOverPanel) gameOverPanel.SetActive(true);
-        if (gameOverText) gameOverText.text = message;
+        isGameActive = false;
+        gameOverPanel.SetActive(true);
 
-        // Disable buttons so no more clicks
-        SetInteractable(false);
-
-        // Make restart visible & wired
-        if (restartButton)
+        if (isTie)
         {
-            restartButton.gameObject.SetActive(true);
-            restartButton.onClick.RemoveAllListeners();
-            restartButton.onClick.AddListener(Restart);
+            gameOverText.text = "It's a Tie!";
+        }
+        else
+        {
+            gameOverText.text = $"Player {(currentPlayer == 1 ? "X" : "O")} Wins!";
+        }
+
+        // Disable all cell buttons
+        foreach (var button in cellButtons)
+        {
+            button.interactable = false;
         }
     }
 
-    private void SetInteractable(bool enabled)
+    /// <summary>
+    /// Updates the visual representation of a single cell.
+    /// </summary>
+    private void UpdateCellUI(int cellIndex)
     {
-        for (int i = 0; i < spaceList.Length; i++)
+        TMP_Text textComponent = cellButtons[cellIndex].GetComponentInChildren<TMP_Text>();
+        if (textComponent != null)
         {
-            var btn = spaceList[i] ? spaceList[i].GetComponentInParent<Button>() : null;
-            if (btn) btn.interactable = enabled;
+            switch (boardState[cellIndex])
+            {
+                case 1:
+                    textComponent.text = "X";
+                    break;
+                case 2:
+                    textComponent.text = "O";
+                    break;
+                default:
+                    textComponent.text = "";
+                    break;
+            }
         }
     }
 }
@@ -764,29 +760,25 @@ public class GameController : MonoBehaviour
 
 ## 4) Create a host object & wire `GameController` <span style="color:purple;">🟣</span>
 
-⬜ **4.1** **Hierarchy:** Right-click → **Create Empty** → rename **`SceneManager`**
-⬜ **4.2** **Inspector (SceneManager):** **Add Component → GameController**
+⬜ **4.1** **Hierarchy:** Right-click → **Create Empty** → rename **`GameManager`**
+⬜ **4.2** **Inspector (GameManager):** **Add Component → GameController**
 
-### 4A) Fill the 9 cell labels into `spaceList`
+### 4A) Fill the Cell Buttons array
 
-⬜ **4.3** **Inspector (GameController on SceneManager):**
+⬜ **4.3** **Inspector (GameController on GameManager):**
 
-* **Space List → Size = 9**
-* Expand **BoardCanvas → Grid** in **Hierarchy**. For each index **(0..8)**, drag the **child `Text (TMP)`** inside the corresponding **Cell_N**:
+* **Cell Buttons → Size = 9**
+* Expand **BoardCanvas → Grid** in **Hierarchy**. For each index **(0..8)**, drag the corresponding **Cell_N** GameObject (which has the Button component) into the array slots:
 
-| `spaceList[index]` | Drag this from Hierarchy (TMP Text)  |
-| ------------------ | ------------------------------------ |
-| 0                  | `BoardCanvas/Grid/Cell_0/Text (TMP)` |
-| 1                  | `BoardCanvas/Grid/Cell_1/Text (TMP)` |
-| 2                  | `BoardCanvas/Grid/Cell_2/Text (TMP)` |
-| 3                  | `BoardCanvas/Grid/Cell_3/Text (TMP)` |
-| 4                  | `BoardCanvas/Grid/Cell_4/Text (TMP)` |
-| 5                  | `BoardCanvas/Grid/Cell_5/Text (TMP)` |
-| 6                  | `BoardCanvas/Grid/Cell_6/Text (TMP)` |
-| 7                  | `BoardCanvas/Grid/Cell_7/Text (TMP)` |
-| 8                  | `BoardCanvas/Grid/Cell_8/Text (TMP)` |
+| `Cell Buttons[index]` | Drag this from Hierarchy (the Button object) |
+| --------------------- | ------------------------------------------ |
+| 0                     | `BoardCanvas/Grid/Cell_0`                  |
+| 1                     | `BoardCanvas/Grid/Cell_1`                  |
+| 2                     | `BoardCanvas/Grid/Cell_2`                  |
+| ...and so on...       | ...                                        |
+| 8                     | `BoardCanvas/Grid/Cell_8`                  |
 
-> ⚠️ **Order matters** (top-left to bottom-right).
+> ⚠️ **Order matters** (top-left to bottom-right, 0 to 8).
 
 ### 4B) Hook the Game Over UI
 
@@ -795,8 +787,6 @@ public class GameController : MonoBehaviour
 * **Game Over Panel =** `BoardCanvas/GameOverPanel`
 * **Game Over Text =** `BoardCanvas/GameOverPanel/GameOverText`
 * **Restart Button =** `BoardCanvas/GameOverPanel/RestartButton`
-
-> (The `Restart()` click is wired in code when the panel is shown.)
 
 ---
 
@@ -807,7 +797,7 @@ public class GameController : MonoBehaviour
 3. Click another cell: it should display **“O”** and disable.
 4. Force a win (e.g., **X** on 0,1,2).
 
-   * **GameOverPanel** appears with **“X wins!”**, cells become non-clickable, **Restart** shows.
+   * **GameOverPanel** appears with **“Player X Wins!”**, cells become non-clickable, **Restart** button is visible.
 5. Click **Restart**: board clears, **X** starts again.
 
 ---
@@ -815,55 +805,20 @@ public class GameController : MonoBehaviour
 ## 6) Troubleshooting (exact spots) <span style="color:purple;">🟣</span>
 
 * **Click does nothing:**
-  – On each **Cell**: Button **OnClick → Space.SetSpace()** must exist.
-  – The **Space** component must have **Button** and **Button Text** assigned.
+  – On the **`GameManager`**, ensure the **`Cell Buttons`** array is filled with all 9 `Cell_` GameObjects in the correct order.
+  – Make sure the **`Cell` prefab** has the **`Cell.cs`** script attached.
 * **X/O not switching:**
-  – Confirm **GameController.EndTurn()** is called (Debug.Log inside if needed).
+  – This logic is now handled entirely inside `GameController.cs`. Check the console for any errors when clicking.
 * **Win not detected:**
-  – Check **spaceList order** is **0..8** left-to-right, top-to-bottom.
+  – The `winConditions` array is hardcoded. This should not fail unless the `boardState` is not being updated correctly.
 * **Restart not clearing:**
-  – Ensure **RestartButton** is assigned on **GameController**.
+  – Ensure **RestartButton** is assigned on **GameController**. The `RestartGame()` method now handles all resetting logic.
 * **GameOver never shows:**
-  – **GameOverPanel** should be **disabled** initially and assigned to the field.
-* **Cells still clickable after game over:**
-  – `SetInteractable(false)` may not find the Button if your prefab structure changed. Verify each TMP lives under a Button parent.
-
----
-
-## 7) (Optional helper) Auto-wire the 9 cells by name
-
-> Use this only if students struggle with the array order. Add this to **GameController** (below fields), then click a new **“Auto Wire”** button in the Inspector via a tiny custom editor or call in Start once (here we show a method you can call manually in **Start()** if needed).
-
-```csharp
-// Add inside GameController:
-[ContextMenu("AutoWire From Grid (by names Cell_0..Cell_8)")]
-private void AutoWire()
-{
-    var grid = GameObject.Find("Grid");
-    if (!grid)
-    {
-        Debug.LogWarning("Grid not found.");
-        return;
-    }
-    var texts = grid.GetComponentsInChildren<TMP_Text>(true);
-    // Simple name match
-    for (int i = 0; i < 9; i++)
-    {
-        foreach (var t in texts)
-        {
-            if (t.transform.parent.name == $"Cell_{i}")
-            {
-                spaceList[i] = t;
-                break;
-            }
-        }
-    }
-    Debug.Log("AutoWire complete.");
-}
-```
+  – **GameOverPanel** should be **disabled** initially and assigned to its field on the `GameController`.
 
 ---
 ---
+
 # 🔹 Part 4 — VR UX Polish (Reticle, Hover/Press, Haptics, SFX)
 
 <span style="color:purple;font-weight:bold;">🟣 Session Homework — complete every purple step</span>
@@ -879,10 +834,10 @@ private void AutoWire()
 
 ---
 
-## 0) Pre-flight (must be true from Part 1–3) <span style="color:purple;">🟣</span>
+## 0) Pre-flight (must be true from Parts 1–3) <span style="color:purple;">🟣</span>
 
 ⬜ Rays click UI (you can place X/O).
-⬜ `SceneManager` has **GameController** with `spaceList[0..8]` wired.
+⬜ `GameManager` has **GameController** with `cellButtons[0..8]` wired.
 ⬜ `BoardCanvas` exists with **OVR Raycaster** and the 3×3 **Grid**.
 ⬜ **OVRPlayerController** provides locomotion.
 
@@ -946,7 +901,7 @@ public class ReticleScaler : MonoBehaviour
 
 ### 2A) Improve Color Tint on the Button
 
-⬜ **2.1** **Hierarchy:** select **all 9** `Cell_0..Cell_8`
+⬜ **2.1** **Project → Prefabs:** Open the **`Cell` prefab**.
 ⬜ **2.2** **Inspector (Button → Colors):**
 
 * **Normal:** #FFFFFF
@@ -992,7 +947,7 @@ public class CellHoverScale : MonoBehaviour, IPointerEnterHandler, IPointerExitH
 }
 ```
 
-⬜ **2.4** **Hierarchy:** select **all 9 cells** → **Add Component → CellHoverScale** (keep defaults).
+⬜ **2.4** In the **`Cell` prefab**, **Add Component → CellHoverScale** (keep defaults). Save the prefab.
 
 > ✅ Result: as you hover a cell with the ray, it pops up 5% then settles back when you leave.
 
@@ -1000,8 +955,7 @@ public class CellHoverScale : MonoBehaviour, IPointerEnterHandler, IPointerExitH
 
 ## 3) Haptics on place & win (Meta/OVR) <span style="color:purple;">🟣</span>
 
-We’ll play a tiny pulse on **every move**, and a stronger one on **win**.
-We’ll put the logic in **GameController** so `Space` can just call a single `OnCellClicked()`.
+We’ll play a tiny pulse on **every move**, and a stronger one on **win**. We'll add all this logic directly into `GameController.cs`.
 
 ### 3A) Add a haptics helper inside `GameController.cs`
 
@@ -1018,30 +972,31 @@ private System.Collections.IEnumerator Pulse(float amplitude, float duration)
     OVRInput.SetControllerVibration(0f, 0f, OVRInput.Controller.LTouch);
     OVRInput.SetControllerVibration(0f, 0f, OVRInput.Controller.RTouch);
 }
-
-/// <summary>Called by Space when a cell is clicked, to play click FX/haptics.</summary>
-public void OnCellClicked()
-{
-    // Small, quick tick
-    StartCoroutine(Pulse(0.15f, 0.06f));
-}
 ```
 
-### 3B) Call the helper from `Space.cs`
+### 3B) Call the helper from the right places
 
-⬜ **3.2** Open **`Space.cs`** and **add one line** inside `SetSpace()` **right after** `buttonText.text = gameController.GetSide();`:
+⬜ **3.2** In **`GameController.cs`**, find the **`OnCellClicked`** method. **Add** this line right after checking if the move is valid:
 
 ```csharp
-gameController.OnCellClicked(); // play click haptics (and SFX in next section)
+// Inside OnCellClicked, after the `if (!isGameActive ...)` check:
+StartCoroutine(Pulse(0.15f, 0.06f)); // Play click haptics
 ```
 
-> ✅ Result: every valid click gives a short vibration.
+⬜ **3.3** Find the **`EndGame`** method. **Add** this line to play a stronger pulse on win/tie:
+
+```csharp
+// Inside EndGame, after setting the gameOverText:
+StartCoroutine(Pulse(0.4f, 0.12f)); // Play stronger haptics for game end
+```
+
+> ✅ Result: every valid click gives a short vibration, and the end of a game gives a stronger one.
 
 ---
 
 ## 4) Simple audio: click & win <span style="color:purple;">🟣</span>
 
-We’ll keep audio centralized in **GameController** so it’s easy to wire and grade.
+We’ll keep audio centralized in **GameController** so it’s easy to wire.
 
 ### 4A) Import two clips
 
@@ -1053,9 +1008,9 @@ We’ll keep audio centralized in **GameController** so it’s easy to wire and 
 * **Compression = Off or Low** (they’re tiny)
 * **Normalize OFF**
 
-### 4B) Add AudioSource on BoardCanvas
+### 4B) Add AudioSource on GameManager
 
-⬜ **4.4** **Hierarchy:** select **`BoardCanvas`** → **Add Component → Audio Source**
+⬜ **4.4** **Hierarchy:** select **`GameManager`** → **Add Component → Audio Source**
 
 * **Output:** (leave empty)
 * **Spatial Blend = 0.0 (2D)**
@@ -1067,8 +1022,8 @@ We’ll keep audio centralized in **GameController** so it’s easy to wire and 
 ⬜ **4.5** Open **`GameController.cs`**. Add these **fields** near your other `[Header]` fields:
 
 ```csharp
-[Header("Audio (assign on BoardCanvas)")]
-public AudioSource audioSource;    // drag BoardCanvas AudioSource here
+[Header("Audio")]
+public AudioSource audioSource;    // drag GameManager's AudioSource here
 public AudioClip clickClip;        // Assets/Audio/click.wav
 public AudioClip winClip;          // Assets/Audio/win.wav
 ```
@@ -1076,12 +1031,12 @@ public AudioClip winClip;          // Assets/Audio/win.wav
 ⬜ **4.6** Also **add** these two **methods** *inside* the class:
 
 ```csharp
-private void PlayClick()
+private void PlayClickSound()
 {
     if (audioSource && clickClip) audioSource.PlayOneShot(clickClip, 0.8f);
 }
 
-private void PlayWin()
+private void PlayWinSound()
 {
     if (audioSource && winClip) audioSource.PlayOneShot(winClip, 1.0f);
 }
@@ -1089,24 +1044,14 @@ private void PlayWin()
 
 ⬜ **4.7** **Hook calls**:
 
-* In **`OnCellClicked()`** (we added in Section 3), **add**:
-
-```csharp
-PlayClick();
-```
-
-* In **`ShowGameOver(string message)`**, **add** after `gameOverText.text = message;`:
-
-```csharp
-PlayWin();
-StartCoroutine(Pulse(0.4f, 0.12f)); // a bit stronger haptic on win
-```
+* In **`OnCellClicked()`**, add a call to `PlayClickSound()` right after the haptics call.
+* In **`EndGame()`**, add a call to `PlayWinSound()` right after the haptics call.
 
 ### 4D) Wire references in the Inspector
 
-⬜ **4.8** **Hierarchy:** select **`SceneManager`** → **GameController (component)**
+⬜ **4.8** **Hierarchy:** select **`GameManager`** → **GameController (component)**
 
-* **Audio Source:** drag **`BoardCanvas`** (its **Audio Source** component appears)
+* **Audio Source:** drag the **`GameManager`**'s own **Audio Source** component here.
 * **Click Clip:** drag **`Assets/Audio/click.wav`**
 * **Win Clip:** drag **`Assets/Audio/win.wav`**
 
@@ -1129,11 +1074,11 @@ StartCoroutine(Pulse(0.4f, 0.12f)); // a bit stronger haptic on win
 * **No reticle changes size:**
   – `ReticleScaler` must be on **ReticleRing**; **Camera Eye** must reference **CenterEyeAnchor**.
 * **Hover scale doesn’t work:**
-  – `CellHoverScale` must be on the **same object** as the **Button** (each Cell). Ensure **OVR Input Module** is in the scene.
+  – `CellHoverScale` must be on the **`Cell` prefab**. Ensure **OVR Input Module** is in the scene.
 * **No haptics:**
-  – Are you in headset focus (Link/AirLink active)? The **Pulse** coroutine is in **GameController** and should be called from **Space.SetSpace()** → `gameController.OnCellClicked();`
+  – Are you in headset focus (Link/AirLink active)? The **Pulse** coroutine is in **GameController** and should be called from **OnCellClicked** and **EndGame**.
 * **No audio:**
-  – **AudioSource** must be on **BoardCanvas**; clips assigned on **GameController**; device volume up.
+  – **AudioSource** must be on **GameManager**; clips assigned on **GameController**; device volume up.
 * **Audio very quiet:**
   – Increase the **AudioSource Volume** or `PlayOneShot` volume (the second arg).
 * **UI stops highlighting after win:**
@@ -1335,7 +1280,7 @@ StartCoroutine(Pulse(0.4f, 0.12f)); // a bit stronger haptic on win
 ## 0) Pre-flight (from Parts 1–5) <span style="color:purple;">🟣</span>
 
 ⬜ Rays click cells; game plays; **GameOverPanel** appears on win/tie; **RestartButton** restarts the board.
-⬜ **SceneManager** hosts **GameController** and has `spaceList[0..8]` assigned.
+⬜ **GameManager** hosts **GameController** and has `cellButtons[0..8]` assigned.
 ⬜ You have **OVRPlayerController** (root), **OVR Input Module** on **EventSystem**, **OVR Raycaster** on **BoardCanvas**.
 
 ---
@@ -1399,295 +1344,207 @@ We’ll place a thin HUD bar at the **top** of the BoardCanvas.
 
 ---
 
-## 3) Code slices — extend `Space` so the controller knows **which cell** was clicked <span style="color:purple;">🟣</span>
+## 3) Code slices — extend `GameController` for HUD/Undo/Score/Rounds <span style="color:purple;">🟣</span>
 
-> We’ll store each move’s **index** for Undo. We’ll set the index automatically from the controller (no manual typing).
+### 3A) Open `GameController.cs`
 
-**3A) Edit `Space.cs`** — add the **index** field + setter and notify the controller.
-
-* **Open** `Assets/Scripts/TicTacToe/Space.cs`
-* **Add** these members **inside the class** (just under fields is fine):
-
-```csharp
-private int _index; // which cell am I (0..8)?
-
-public void SetIndex(int i) { _index = i; }
-```
-
-* In `SetSpace()` **after** the line where you set the text:
-  (you already added haptics call in Part 4; keep it)
-
-```csharp
-// Already present:
-buttonText.text = gameController.GetSide();
-gameController.OnCellClicked(); // haptics/sfx from Part 4
-
-// NEW: tell controller which cell was played
-gameController.RegisterMove(_index);
-```
-
-*(Leave the rest of SetSpace() the same, including disabling the button and calling `gameController.EndTurn();`)*
-
----
-
-## 4) Code slices — extend `GameController` for HUD/Undo/Score/Rounds <span style="color:purple;">🟣</span>
-
-**4A) Open** `Assets/Scripts/TicTacToe/GameController.cs`
 Add these **new fields** near the top (with your other `[Header]` blocks):
 
 ```csharp
-[Header("HUD (assign from BoardCanvas/HUDPanel)")]
-public TMP_Text turnText;     // HUDPanel/TurnText
-public TMP_Text scoreXText;   // HUDPanel/ScoreXText
-public TMP_Text scoreOText;   // HUDPanel/ScoreOText
-public TMP_Text roundText;    // HUDPanel/RoundText
+[Header("HUD UI")]
+public TMP_Text turnText;
+public TMP_Text scoreXText;
+public TMP_Text scoreOText;
+public TMP_Text roundText;
+public Button undoButton;
+public Button resetAllButton;
 
-[Header("State / Score")]
-public int scoreX = 0;
-public int scoreO = 0;
-public int round = 1;
+[Header("Game Stats")]
+private int scoreX = 0;
+private int scoreO = 0;
+private int currentRound = 1;
 
-// Move history for Undo
-private System.Collections.Generic.List<int> moveHistory = new System.Collections.Generic.List<int>();
-
-// Track gameover for UI buttons
-private bool isGameOver = false;
+// For the Undo feature
+private System.Collections.Generic.Stack<int> moveHistory = new System.Collections.Generic.Stack<int>();
 ```
 
-**4B) Auto-set each cell’s index when wiring (small edit to your existing method)**
-Find `SetGameControllerReferenceForButtons()` and **replace its body** with:
+### 3B) Update `InitializeGame()` to hook up new buttons
+
+Find `InitializeGame()` and add listeners for the Undo and Reset All buttons:
 
 ```csharp
-for (int i = 0; i < spaceList.Length; i++)
-{
-    if (!spaceList[i]) continue;
-    var space = spaceList[i].GetComponentInParent<Space>();
-    if (space != null)
-    {
-        space.SetControllerReference(this);
-        space.SetIndex(i); // NEW: tell each Space its index (0..8)
-    }
-    else
-    {
-        Debug.LogWarning($"[GameController] No Space script for index {i}.");
-    }
-}
+// Inside InitializeGame(), after wiring the restartButton:
+undoButton.onClick.AddListener(UndoLastMove);
+resetAllButton.onClick.AddListener(ResetAllStats);
 ```
 
-**4C) Add HUD updater + clear history**
-Add these **methods** inside the class:
+### 3C) Create the HUD updater method
+
+Add this new method inside the class to centralize all HUD text updates:
 
 ```csharp
 private void UpdateHUD()
 {
-    if (turnText)   turnText.text   = $"Turn: {side}";
+    if (turnText) turnText.text = isGameActive ? $"Turn: {(currentPlayer == 1 ? "X" : "O")}" : "Game Over";
     if (scoreXText) scoreXText.text = $"X: {scoreX}";
     if (scoreOText) scoreOText.text = $"O: {scoreO}";
-    if (roundText)  roundText.text  = $"Round: {round}";
-}
+    if (roundText) roundText.text = $"Round: {currentRound}";
 
-private void ClearHistory()
-{
-    moveHistory.Clear();
+    // The Undo button should only be active during a game and if there are moves to undo.
+    if (undoButton) undoButton.interactable = isGameActive && moveHistory.Count > 0;
 }
 ```
 
-**4D) Edit `Start()`** — ensure HUD updates and state is clean
-Find your `Start()` method and **replace** with:
+### 3D) Call `UpdateHUD()` at the right times
+
+- At the end of **`RestartGame()`**.
+- At the end of **`OnCellClicked()`** (after switching the player).
+- At the end of **`EndGame()`**.
+- At the end of **`UndoLastMove()`** (we'll create this next).
+- At the end of **`ResetAllStats()`** (we'll create this next).
+
+### 3E) Add `Undo`, `ResetAll`, and `NewRound` logic
+
+Add these three new methods to `GameController.cs`:
 
 ```csharp
-private void Start()
-{
-    SetGameControllerReferenceForButtons();
-
-    side = "X";
-    moves = 0;
-    isGameOver = false;
-    ClearHistory();
-
-    if (gameOverPanel) gameOverPanel.SetActive(false);
-    if (restartButton) restartButton.gameObject.SetActive(false);
-
-    UpdateHUD();
-}
-```
-
-**4E) Record every move for Undo**
-Add this **method** inside the class:
-
-```csharp
-public void RegisterMove(int index)
-{
-    // Avoid duplicates if someone misfires
-    if (!moveHistory.Contains(index))
-        moveHistory.Add(index);
-}
-```
-
-**4F) Award points on win, track gameover, update HUD**
-Find `ShowGameOver(string message)` and **replace** it with:
-
-```csharp
-private void ShowGameOver(string message)
-{
-    isGameOver = true;
-
-    // Award the winner (not for ties)
-    if (message.Contains("wins"))
-    {
-        if (side == "X") scoreX++;
-        else if (side == "O") scoreO++;
-    }
-
-    if (gameOverPanel) gameOverPanel.SetActive(true);
-    if (gameOverText)  gameOverText.text = message;
-
-    SetInteractable(false);
-    UpdateHUD();
-
-    if (restartButton)
-    {
-        // Rename visually to "New Round" in the scene (done in Part 6 step 2.3)
-        restartButton.gameObject.SetActive(true);
-        restartButton.onClick.RemoveAllListeners();
-        restartButton.onClick.AddListener(NewRound);
-    }
-
-    // Win SFX/Haptics (from Part 4)
-    PlayWin();
-    StartCoroutine(Pulse(0.4f, 0.12f));
-}
-```
-
-**4G) Add New Round + Reset All + Undo**
-Add these **three methods** inside the class:
-
-```csharp
-public void NewRound()
-{
-    // Keep scores, advance round, reset the board
-    round++;
-    side = "X";
-    moves = 0;
-    isGameOver = false;
-    ClearHistory();
-
-    for (int i = 0; i < spaceList.Length; i++)
-    {
-        if (spaceList[i]) spaceList[i].text = string.Empty;
-        var btn = spaceList[i] ? spaceList[i].GetComponentInParent<Button>() : null;
-        if (btn) btn.interactable = true;
-    }
-
-    if (gameOverPanel) gameOverPanel.SetActive(false);
-    if (restartButton) restartButton.gameObject.SetActive(false);
-
-    UpdateHUD();
-}
-
-public void ResetAll()
-{
-    // Reset scores and board; round back to 1
-    scoreX = 0; scoreO = 0; round = 1;
-    NewRound(); // will reset board, set side X, etc.
-}
-
 public void UndoLastMove()
 {
-    if (isGameOver || moveHistory.Count == 0) return;
+    if (moveHistory.Count == 0 || !isGameActive) return;
 
-    int lastIndex = moveHistory[moveHistory.Count - 1];
-    moveHistory.RemoveAt(moveHistory.Count - 1);
+    int lastMoveIndex = moveHistory.Pop();
 
-    // Clear that cell and re-enable its button
-    if (lastIndex >= 0 && lastIndex < spaceList.Length)
-    {
-        if (spaceList[lastIndex]) spaceList[lastIndex].text = string.Empty;
-        var btn = spaceList[lastIndex] ? spaceList[lastIndex].GetComponentInParent<Button>() : null;
-        if (btn) btn.interactable = true;
-    }
+    // Revert game state
+    boardState[lastMoveIndex] = 0;
+    movesMade--;
+    currentPlayer = (currentPlayer == 1) ? 2 : 1; // Switch turn back
 
-    // Step back move counter and turn
-    if (moves > 0) moves--;
-    // Swap turn back
-    side = (side == "X") ? "O" : "X";
+    // Update UI
+    UpdateCellUI(lastMoveIndex);
+    cellButtons[lastMoveIndex].interactable = true;
 
     UpdateHUD();
+    StartCoroutine(Pulse(0.1f, 0.05f)); // Gentle confirmation haptic
+}
 
-    // Gentle haptic to confirm undo (optional)
-    StartCoroutine(Pulse(0.1f, 0.05f));
+public void ResetAllStats()
+{
+    scoreX = 0;
+    scoreO = 0;
+    currentRound = 1;
+    RestartGame(); // This will reset the board and update the HUD
+}
+
+// Rename RestartGame to NewRound for clarity, and have the old RestartGame call it.
+// This keeps the existing button wiring from Part 3 working.
+public void RestartGame()
+{
+    isGameActive = true;
+    currentPlayer = 1;
+    movesMade = 0;
+    moveHistory.Clear();
+
+    for (int i = 0; i < boardState.Length; i++)
+    {
+        boardState[i] = 0;
+        UpdateCellUI(i);
+        cellButtons[i].interactable = true;
+    }
+
+    gameOverPanel.SetActive(false);
+    UpdateHUD();
 }
 ```
 
-> ⚠️ You **do not** need to change `EndTurn()` — it already handles win/tie and switching sides. The **only** new logic we injected is **RegisterMove**, **NewRound**, **ResetAll**, **UndoLastMove**, and **HUD updates**.
+### 3F) Update `OnCellClicked()` and `EndGame()`
+
+- In `OnCellClicked()`, before updating the board state, push the move to the history stack: `moveHistory.Push(cellIndex);`
+- In `EndGame()`, if it's not a tie, award points to the winner:
+  ```csharp
+  // Inside EndGame()
+  if (!isTie)
+  {
+      if (currentPlayer == 1) scoreX++;
+      else scoreO++;
+  }
+  ```
+- In `EndGame()`, also add a call to `UpdateHUD()` at the end.
+- The `RestartButton` on the `GameOverPanel` should now be for starting a *new round*. Find where you add its listener in `InitializeGame()` and change it to call a new method `StartNewRound()`.
+
+```csharp
+// New method in GameController
+public void StartNewRound()
+{
+    currentRound++;
+    RestartGame(); // This resets the board and HUD
+}
+// In InitializeGame(), change the listener:
+restartButton.onClick.AddListener(StartNewRound);
+```
 
 ---
 
-## 5) Wire HUD & Buttons in the Inspector <span style="color:purple;">🟣</span>
+## 4) Wire HUD & Buttons in the Inspector <span style="color:purple;">🟣</span>
 
-⬜ **5.1** **Hierarchy:** select **`SceneManager`** → **GameController** (component)
+⬜ **4.1** **Hierarchy:** select **`GameManager`** → **GameController** (component)
 
 * **Turn Text:** drag `BoardCanvas/HUDPanel/TurnText`
 * **Score X Text:** drag `BoardCanvas/HUDPanel/ScoreXText`
 * **Score O Text:** drag `BoardCanvas/HUDPanel/ScoreOText`
 * **Round Text:** drag `BoardCanvas/HUDPanel/RoundText`
-
-⬜ **5.2** **Undo button OnClick**
-
-* Select **`HUDPanel/UndoButton`** → **Button (OnClick)** → **+**
-* Drag **`SceneManager`** → choose **`GameController.UndoLastMove()`**
-
-⬜ **5.3** **Reset All button OnClick**
-
-* Select **`HUDPanel/ResetAllButton`** → **Button (OnClick)** → **+**
-* Drag **`SceneManager`** → choose **`GameController.ResetAll()`**
-
-⬜ **5.4** **New Round button** (already wired in code on game over)
-
-* Just make sure the **button object** is the same `RestartButton` under **GameOverPanel** you renamed visually to “New Round”.
+* **Undo Button:** drag `BoardCanvas/HUDPanel/UndoButton`
+* **Reset All Button:** drag `BoardCanvas/HUDPanel/ResetAllButton`
 
 ---
 
-## 6) Debug Overlay (helps juniors see state) <span style="color:purple;">🟣</span>
+## 5) Debug Overlay (helps juniors see state) <span style="color:purple;">🟣</span>
 
-⬜ **6.1** **Hierarchy:** `BoardCanvas` → **UI → Panel** → rename **`DebugPanel`**
+⬜ **5.1** **Hierarchy:** `BoardCanvas` → **UI → Panel** → rename **`DebugPanel`**
 
 * **RectTransform:** **Bottom stretch**, **Left/Right=8**, **Bottom=8**, **Height=0.16**
 * **Image:** #000000 with **Alpha 120/255**
 * **Active = OFF** (start hidden)
 
-⬜ **6.2** **Debug text**
+⬜ **5.2** **Debug text**
 
 * **DebugPanel** → **UI → Text (TextMeshPro)** → rename **`DebugText`**
 * **TMP:** **Font Size = 40**, **Alignment = Top Left**, **Text = “(debug…)”**
 
-⬜ **6.3** **Toggle button**
+⬜ **5.3** **Toggle button**
 
 * **HUDPanel** → **UI → Button (TextMeshPro)** → rename **`DebugToggle`**
 * **RectTransform:** **Anchor Right**, **Right=0.10**, **Width=0.12**, **Height=0.08**, **Pos Y=-0.02**
 * **TMP:** **Text = “Debug”**, **Font Size=40**
 
-⬜ **6.4** **Project:** `Assets/Scripts/DebugOverlay.cs`
+⬜ **5.4** **Project:** `Assets/Scripts/DebugOverlay.cs`
 
 ```csharp
 using UnityEngine;
 using TMPro;
+using System.Reflection; // Needed for reflection
 
 public class DebugOverlay : MonoBehaviour
 {
-    public GameController controller; // drag SceneManager here
+    public GameController controller; // drag GameManager here
     public GameObject panel;          // drag BoardCanvas/DebugPanel
     public TMP_Text debugText;        // drag BoardCanvas/DebugPanel/DebugText
 
     void Update()
     {
-        if (!controller || !debugText) return;
+        if (!controller || !debugText || !panel.activeSelf) return;
+
+        // Use reflection to get private field values from GameController
+        string turn = GetPrivateField<int>(controller, "currentPlayer") == 1 ? "X" : "O";
+        int moves = GetPrivateField<int>(controller, "movesMade");
+        int scoreX = GetPrivateField<int>(controller, "scoreX");
+        int scoreO = GetPrivateField<int>(controller, "scoreO");
+        int round = GetPrivateField<int>(controller, "currentRound");
+        bool active = GetPrivateField<bool>(controller, "isGameActive");
+
         debugText.text =
-            $"Turn: {controller.GetSide()}\n" +
-            $"Moves: (internal counter)\n" +
-            $"Scores  X:{controller.scoreX}  O:{controller.scoreO}\n" +
-            $"Round: {controller.round}\n" +
-            $"GameOver: {(panel && panel.activeSelf ? "Panel Visible" : "Hidden")}";
+            $"Turn: {turn} | Moves: {moves}\n" +
+            $"Score: X={scoreX}, O={scoreO} | Round: {round}\n" +
+            $"Game Active: {active}";
     }
 
     public void Toggle()
@@ -1695,12 +1552,20 @@ public class DebugOverlay : MonoBehaviour
         if (!panel) return;
         panel.SetActive(!panel.activeSelf);
     }
+
+    // Helper to access private fields for debugging
+    private T GetPrivateField<T>(object instance, string fieldName)
+    {
+        BindingFlags bindFlags = BindingFlags.Instance | BindingFlags.NonPublic;
+        FieldInfo field = instance.GetType().GetField(fieldName, bindFlags);
+        return (T)field.GetValue(instance);
+    }
 }
 ```
 
 ⬜ **6.5** **Hierarchy:** select **`BoardCanvas`** → **Add Component → DebugOverlay**
 
-* **Controller:** drag **`SceneManager`**
+* **Controller:** drag **`GameManager`**
 * **Panel:** drag **`BoardCanvas/DebugPanel`**
 * **Debug Text:** drag **`BoardCanvas/DebugPanel/DebugText`**
 
@@ -1726,16 +1591,16 @@ public class DebugOverlay : MonoBehaviour
 ## 8) Troubleshooting (exact spots) <span style="color:purple;">🟣</span>
 
 * **Undo does nothing:**
-  – Ensure **Space.SetSpace()** calls `gameController.RegisterMove(_index);` before `EndTurn()`.
-  – Confirm `SetIndex(i)` is called from the controller (step 4B).
+  – Make sure the `moveHistory` stack is being pushed to in `OnCellClicked`.
+  – Confirm the `UndoButton` is assigned and its `OnClick` is wired to `GameController.UndoLastMove()`.
 * **Turn HUD not changing:**
-  – Did you call `UpdateHUD()` in `Start()`, `NewRound()`, `UndoLastMove()`, and inside `ShowGameOver()`?
+  – Did you call `UpdateHUD()` from all the required methods? (`RestartGame`, `OnCellClicked`, `EndGame`, `UndoLastMove`, `ResetAllStats`).
 * **Score doesn’t increase on win:**
-  – In `ShowGameOver`, we check `message.Contains("wins")`. If you changed the message text, keep “wins” in it or increment manually.
+  – Make sure the score logic inside `EndGame` is correctly implemented.
 * **Buttons not firing:**
-  – Check **UndoButton** → OnClick → `GameController.UndoLastMove()` and **ResetAllButton** → `GameController.ResetAll()`.
-* **Debug panel always empty:**
-  – `BoardCanvas` must have **DebugOverlay**; its three fields must be assigned.
+  – Check all HUD buttons in the Inspector to ensure their `OnClick()` events are wired to the correct methods on the `GameController`.
+* **Debug panel shows errors or is empty:**
+  – `BoardCanvas` must have the `DebugOverlay` script. Its three fields must be assigned. The reflection code assumes the private field names in `GameController` are correct (`currentPlayer`, `movesMade`, etc.).
 
 ---
 
@@ -1745,6 +1610,3 @@ public class DebugOverlay : MonoBehaviour
 * **Screenshots**: GameController with HUD fields assigned; HUDPanel hierarchy; DebugOverlay fields assigned.
 
 ---
-
-
-
