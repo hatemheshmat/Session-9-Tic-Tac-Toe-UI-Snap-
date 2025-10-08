@@ -1,4 +1,4 @@
-# 🔹 Part 1 — Project & Rig Foundation (Meta-only) + Locomotion + Grab <span style="color:purple;font-weight:bold;">🟣 Session Homework</span>
+# 🔹 Part 1 — Project & Rig Foundation (Meta-only) + Locomotion + Grab <span style="color:purple;font-weight:bold;">🟣  </span>
 
 **Goal:** In a brand-new scene, drop **OVRPlayerController** for **locomotion**, add **controller rays** for UI, set up **grab** on a test cube, and prove clicks on a **world-space button**.
 **Absolutely no** “XR” root object.
@@ -262,7 +262,7 @@ Directional Light
 ---
 # 🔹 Part 2 — Wall Board, BoardCanvas, 3×3 Grid, Cell Prefab
 
-<span style="color:purple;font-weight:bold;">🟣 Session Homework — complete every purple step</span>
+<span style="color:purple;font-weight:bold;">🟣   — complete every purple step</span>
 
 **Goal:** Create a **wall** in 3D, mount a **world-space canvas** on it, add a **Grid Layout (3×3)**, and make a **Cell** **Button (TMP)** prefab the rays can hover/click. Zero game logic yet (that’s Part 3).
 
@@ -483,7 +483,7 @@ Directional Light
 
 # 🔹 Part 3 — Gameplay Logic (step-by-step code + wiring)
 
-<span style="color:purple;font-weight:bold;">🟣 Session Homework — complete every purple step</span>
+<span style="color:purple;font-weight:bold;">🟣   — complete every purple step</span>
 
 **Goal:** Clicking a cell places **X/O**, detects **win/tie**, shows a **Game Over** overlay, and **Restart** works. We will build a robust, data-driven system where the game logic is separate from the UI.
 
@@ -821,7 +821,7 @@ public class GameController : MonoBehaviour
 
 # 🔹 Part 4 — VR UX Polish (Reticle, Hover/Press, Haptics, SFX)
 
-<span style="color:purple;font-weight:bold;">🟣 Session Homework — complete every purple step</span>
+<span style="color:purple;font-weight:bold;">🟣   — complete every purple step</span>
 
 **Goal:**
 
@@ -1089,7 +1089,7 @@ private void PlayWinSound()
 
 # 🔹 Part 5 — Handedness Filters (Left = 3D only, Right = UI only)
 
-<span style="color:purple;font-weight:bold;">🟣 Session Homework — complete every purple step</span>
+<span style="color:purple;font-weight:bold;">🟣   — complete every purple step</span>
 
 **Goal:**
 
@@ -1265,7 +1265,7 @@ private void PlayWinSound()
 
 # 🔹 Part 6/6 — HUD (Turn/Score), Rounds, Undo, Reset, Debug Overlay
 
-<span style="color:purple;font-weight:bold;">🟣 Session Homework — complete every purple step</span>
+<span style="color:purple;font-weight:bold;">🟣   — complete every purple step</span>
 
 **Goal:**
 
