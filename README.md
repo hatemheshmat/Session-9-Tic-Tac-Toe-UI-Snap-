@@ -1,116 +1,345 @@
 # VR Tic-Tac-Toe: Educator & Student Guide (Unity 6.2, Meta SDK v65+)
 
-This guide provides a complete walkthrough for creating a VR Tic-Tac-Toe game. It is designed for educators leading a session and for students to follow along. The tutorial covers project setup, VR rig implementation, UI creation, core gameplay logic, and advanced features, all using the latest recommended practices.
+This guide provides a complete walkthrough for creating a feature-rich VR Tic-Tac-Toe game. It is designed for educators leading a session and for students to follow along. The tutorial covers project setup, a modern VR player rig with locomotion, world-space UI, robust data-driven gameplay logic, and advanced features like scoring and an undo system, all using the latest recommended practices for Unity 6.2 and the Meta XR SDK.
 
 ---
 
-# 🔹 Part 1/5 — Project Setup (Unity 6.2 • URP • Meta XR AIO SDK v65+)
+# 🔹 Part 1/5 — Project Setup (Unity 6.2 • URP • Meta XR SDK v65+)
 
 **Goal:** Configure a new Unity project from scratch for optimal performance and compatibility with the Meta Quest 2/3 platform.
 
-## ✅ To-Do Checklist (with why)
-
-### 1) Create the project
-* ⬜ **1.1** Unity Hub → **New Project** → **3D (URP)** → name it `VR_TicTacToe_Tutorial`.
-  * • **Why:** The Universal Render Pipeline (URP) is the standard for performant graphics on mobile VR platforms like Quest.
-
-### 2) Switch Platform & Set Texture Compression
-* ⬜ **2.1** Go to **File → Build Settings**.
-* ⬜ **2.2** Select **Android** from the platform list and click **Switch Platform**.
-  * • **Why:** The Quest OS is a modified version of Android. Switching early prevents unnecessary re-importing of assets later.
-* ⬜ **2.3** In the same window, set **Texture Compression** to **ASTC**.
-  * • **Why:** ASTC offers the best balance of quality and memory usage for Quest development.
-
-### 3) Configure Player Settings
-* ⬜ **3.1** Go to **Edit → Project Settings → Player**.
-* ⬜ **3.2** Under **Other Settings**, configure the following:
-    * • **Package Name:** `com.YourCompany.TicTacToe` (must be unique).
-    * • **Minimum API Level:** Set to **API Level 29** or higher.
-    * • **Target API Level:** Set to **Highest Installed**.
-    * • **Scripting Backend:** Set to **IL2CPP**.
-    * • **Target Architectures:** Check **ARM64** only.
-  * • **Why:** These settings are required by the Meta Quest Store and ensure your app uses the fastest, most modern architecture.
-
-### 4) Install and Configure Meta XR SDK
-* ⬜ **4.1** Go to **Window → Package Manager**.
-* ⬜ **4.2** Ensure the **Unity Registry** is selected. Search for and install the **Meta XR All-in-One SDK**.
-* ⬜ **4.3** Go to **Edit → Project Settings → XR Plug-in Management**.
-* ⬜ **4.4** In the **Android** tab, enable **Meta XR**.
-  * • **Why:** This activates the Meta runtime, allowing your app to communicate with the Quest hardware.
-
-### 5) Run Project Validation
-* ⬜ **5.1** Go to **Edit → Project Settings → XR Plug-in Management → Project Validation**.
-* ⬜ **5.2** Click the **Fix All** button to apply Meta's recommended project settings.
-  * • **Why:** This tool automatically configures critical settings like input handling, permissions, and graphics options, saving time and preventing common issues.
-
-### 6) Optimize URP for Performance
-* ⬜ **6.1** In the **Project** window, find your **URP Asset** (e.g., `UniversalRP-HighQuality`).
-* ⬜ **6.2** Select it and, in the Inspector, set **MSAA** to **4x** and disable **HDR**.
-  * • **Why:** 4x MSAA provides a good anti-aliasing level for VR without a major performance hit. HDR is unnecessary and costly on Quest.
+## 🧭 Flow Map (Window usage for this part)
+*   **Unity Hub** → Create the project.
+*   **Build Settings / Project Settings** → Configure for Android, Player, XR, and Graphics.
+*   **Package Manager** → Install the Meta XR All-in-One SDK.
+*   **Meta XR Project Setup Tool** → Apply all recommended fixes.
+*   **Project Window** → Organize folders and create the initial scene.
 
 ---
 
-# 🔹 Part 2/5 — Scene, VR Rig, and Board UI
+## ✅ To-Do Checklist (with "why" + exact clicks)
 
-**Goal:** Set up a basic scene with a modern VR player rig, a physical wall, and a world-space canvas to serve as the game board.
+### 1) Create the Project (URP)
+*   ⬜ **1.1** **Unity Hub** → **New Project** → **3D (URP)** template → name it `VR_TicTacToe_Guide` → Create.
+    *   **Why:** The Universal Render Pipeline (URP) is Unity's modern, performant rendering solution, essential for achieving high frame rates on mobile VR hardware like the Quest.
+
+### 2) Switch Platform & Set Texture Compression
+*   ⬜ **2.1** Go to **File → Build Settings...**.
+*   ⬜ **2.2** Select **Android** from the platform list and click **Switch Platform**.
+    *   **Why:** The Quest operating system is a fork of Android. Switching early ensures all assets are imported with the correct settings from the start, avoiding lengthy re-imports later.
+*   ⬜ **2.3** In the same window, set **Texture Compression** to **ASTC**.
+    *   **Why:** ASTC provides the best balance of visual quality and memory usage for textures on Quest devices, which is critical for performance.
+
+### 3) Configure Player Settings for Quest
+*   ⬜ **3.1** Go to **Edit → Project Settings... → Player**.
+*   ⬜ **3.2** Under the **Other Settings** section for the Android tab (🤖 icon), configure the following:
+    *   • **Package Name:** `com.YourCompany.VR.TicTacToe` (must be a unique identifier).
+    *   • **Minimum API Level:** Set to **Android 10.0 (API Level 29)** or higher.
+    *   • **Target API Level:** Set to **Highest installed**.
+    *   • **Scripting Backend:** Set to **IL2CPP**.
+    *   • **Target Architectures:** Check **ARM64** only.
+    *   **Why:** These settings are mandatory for developing for the Quest platform and are required for submitting to the Meta Quest Store. IL2CPP provides significantly better performance than the older Mono backend.
+
+### 4) Install and Configure the Meta XR SDK
+*   ⬜ **4.1** Go to **Window → Package Manager**.
+*   ⬜ **4.2** In the top-left, select the **Unity Registry**. Search for and install the **Meta XR All-in-One SDK**.
+*   ⬜ **4.3** After installation, go to **Edit → Project Settings... → XR Plug-in Management**.
+*   ⬜ **4.4** In the **Android** tab, check the box for **Meta XR**.
+    *   **Why:** This activates the Meta runtime, which allows your Unity application to communicate with the Quest headset's hardware for tracking and input.
+
+### 5) Run Meta's Project Validation Tool
+*   ⬜ **5.1** A **Meta XR Project Setup Tool** window should appear. If not, open it from **Edit → Project Settings... → Meta XR**.
+*   ⬜ **5.2** Click the **Fix All** button. The tool will apply several critical project settings automatically.
+    *   **Why:** This tool is a huge time-saver. It correctly configures input systems, graphics settings, and permissions required for a stable VR application, preventing many common setup-related bugs.
+
+### 6) Create Project Folders and Scene
+*   ⬜ **6.1** In the **Project** window, create the following folders in `Assets`: `_Scenes`, `_Scripts`, `_Prefabs`, `_Materials`, `_Audio`.
+*   ⬜ **6.2** Create a new scene: **File → New Scene (Basic 3D)**.
+*   ⬜ **6.3** Immediately save the scene as `Assets/_Scenes/TicTacToe.unity`.
+
+---
+## 📦 End-of-Part 1 Snapshot
+**Hierarchy:**
+```
+Directional Light
+Main Camera
+```
+**Project Structure:**
+```
+Assets/
+  _Audio/
+  _Materials/
+  _Prefabs/
+  _Scenes/
+    TicTacToe.unity
+  _Scripts/
+```
+**Configuration Summary:**
+*   Project is set to the **Android** platform with **ASTC** compression.
+*   **Meta XR** is enabled in XR Plug-in Management.
+*   All validation issues are fixed via the **Meta XR Project Setup Tool**.
+
+---
+---
+
+# 🔹 Part 2/5 — VR Rig, Locomotion & Interactions
+
+**Goal:** Set up a robust, modern VR player rig that supports both smooth and teleport locomotion, as well as ray and grab interactions.
+
+## 🧭 Flow Map
+*   **Hierarchy** → Create a `PlayerRig` parent and add the `OVRCameraRig`.
+*   **Project Window** → Create the `SimpleRigLocomotion.cs` script.
+*   **Inspector** → Add and configure components for locomotion and interaction on the rig.
+
+---
 
 ## ✅ To-Do Checklist
 
-### 1) Scene and Folder Setup
-* ⬜ **1.1** Create folders in `Assets`: `_Scenes`, `_Scripts`, `_Prefabs`, `_Materials`.
-* ⬜ **1.2** Create a new scene: **File → New Scene (Basic 3D)** → save it as `Assets/_Scenes/TicTacToe.unity`.
-* ⬜ **1.3** In the Hierarchy, **delete** the default **Main Camera**.
-  * • **Why:** The VR rig we are about to add includes its own tracked camera.
+### 1) Set Up the Player Rig Hierarchy
+*   ⬜ **1.1** In the `TicTacToe` scene, **delete** the default **Main Camera**.
+*   ⬜ **1.2** Create an empty GameObject named `PlayerRig`.
+*   ⬜ **1.3** In the **Project** window, search for the `OVRCameraRig` prefab and drag it into the Hierarchy, making it a **child** of `PlayerRig`.
+    *   **Why:** Creating a parent `PlayerRig` object allows us to add components like a `CharacterController` for physics-based movement without modifying the `OVRCameraRig` prefab directly. This is a clean and scalable approach.
 
-### 2) Add the Meta VR Rig
-* ⬜ **2.1** In the **Project** window, search for `OVRCameraRig`.
-* ⬜ **2.2** Drag the **OVRCameraRig** prefab into the Hierarchy.
-* ⬜ **2.3** With `OVRCameraRig` selected, go to the Inspector and click **Add Component**. Search for and add the **OVR Manager** script.
-  * • **Why:** `OVRCameraRig` provides the head and hand tracking, while `OVRManager` is the central hub that configures the connection to the headset.
+### 2) Implement Locomotion (Smooth & Teleport)
+*   ⬜ **2.1** Select the `PlayerRig` GameObject. In the Inspector, add a **Character Controller** component. Adjust its **Height** to `1.8` and **Center Y** to `0.9`.
+*   ⬜ **2.2** In `Assets/_Scripts`, create a new C# script named `SimpleRigLocomotion.cs`.
+*   ⬜ **2.3** Paste the following code into the script. This script handles both smooth movement and teleportation.
+```csharp
+using UnityEngine;
 
-### 3) Build the Wall and Board
-* ⬜ **3.1** Create a wall: **Hierarchy → 3D Object → Cube**. Rename it `Wall`.
-* ⬜ **3.2** Set its **Transform** in the Inspector:
-    * • **Position:** (0, 1.5, 2.5)
-    * • **Scale:** (3, 2, 0.1)
-* ⬜ **3.3** Create the game board: **Hierarchy → UI → Canvas**. Rename it `BoardCanvas`.
-* ⬜ **3.4** Configure the `BoardCanvas`:
-    * • Set **Render Mode** to **World Space**.
-    * • Set **Position** to (0, 1.5, 2.44) to place it just in front of the wall.
-    * • Set **Width** to 800, **Height** to 800.
-    * • Set **Scale** to (0.001, 0.001, 0.001).
-  * • **Why:** A world-space canvas exists in the 3D scene, allowing VR users to interact with it directly. The tiny scale is necessary to map its large pixel dimensions into reasonable world units (meters).
+[RequireComponent(typeof(CharacterController))]
+public class SimpleRigLocomotion : MonoBehaviour
+{
+    [Header("Dependencies")]
+    [Tooltip("The OVRCameraRig's transform, used to determine forward direction.")]
+    public Transform cameraRig;
 
-### 4) Add the 3x3 Grid and Cell Prefab
-* ⬜ **4.1** Right-click `BoardCanvas` → **Create Empty**. Rename it `GridContainer`.
-* ⬜ **4.2** Add a **Grid Layout Group** component to `GridContainer`. Configure it:
-    * • **Cell Size:** (250, 250)
-    * • **Spacing:** (20, 20)
-    * • **Constraint:** Fixed Column Count, **Constraint Count:** 3
-* ⬜ **4.3** Right-click `GridContainer` → **UI → Button (TextMeshPro)**. Rename it `Cell`.
-* ⬜ **4.4** Drag the `Cell` from the Hierarchy into `Assets/_Prefabs` to create a prefab. Delete the original from the Hierarchy.
-* ⬜ **4.5** Drag the **`Cell` prefab** back into the `GridContainer` **nine times**.
-* ⬜ **4.6** Rename the instances `Cell_0` to `Cell_8` for clarity.
+    [Header("Movement Settings")]
+    public float moveSpeed = 2.0f;
+    public float turnSpeed = 45.0f; // Degrees per second
 
-### 5) Finalize UI Setup
-* ⬜ **5.1** Select the `EventSystem` in the Hierarchy. Click **Add Component** and add the **OVR Input Module**.
-* ⬜ **5.2** Select the `BoardCanvas`. Click **Add Component** and add the **OVR Raycaster**.
-  * • **Why:** These two components work together to translate VR controller rays into UI clicks that Unity's Event System can understand.
+    [Header("Teleport Settings")]
+    public OVRInput.RawButton teleportButton = OVRInput.RawButton.A;
+    public float maxTeleportDistance = 10.0f;
+    public LayerMask teleportSurfaceMask; // Set to "Default" to teleport on the ground
+    public GameObject teleportMarkerPrefab; // A simple cylinder or sphere prefab
+
+    private CharacterController _characterController;
+    private GameObject _teleportMarkerInstance;
+    private bool _isTeleportTargetValid;
+
+    void Awake()
+    {
+        _characterController = GetComponent<CharacterController>();
+        if (cameraRig == null) cameraRig = FindObjectOfType<OVRCameraRig>().transform;
+    }
+
+    void Start()
+    {
+        if (teleportMarkerPrefab != null)
+        {
+            _teleportMarkerInstance = Instantiate(teleportMarkerPrefab);
+            _teleportMarkerInstance.SetActive(false);
+        }
+    }
+
+    void Update()
+    {
+        HandleSmoothLocomotion();
+        HandleTeleportation();
+    }
+
+    private void HandleSmoothLocomotion()
+    {
+        // Smooth Movement (Left Stick)
+        Vector2 moveInput = OVRInput.Get(OVRInput.RawAxis2D.LThumbstick);
+        Vector3 forward = Vector3.ProjectOnPlane(cameraRig.forward, Vector3.up).normalized;
+        Vector3 right = Vector3.ProjectOnPlane(cameraRig.right, Vector3.up).normalized;
+        Vector3 moveDir = (forward * moveInput.y + right * moveInput.x);
+        _characterController.Move(moveDir * moveSpeed * Time.deltaTime);
+
+        // Snap Turning (Right Stick)
+        if (OVRInput.GetDown(OVRInput.RawButton.RThumbstickLeft))
+        {
+            transform.Rotate(Vector3.up, -turnSpeed);
+        }
+        if (OVRInput.GetDown(OVRInput.RawButton.RThumbstickRight))
+        {
+            transform.Rotate(Vector3.up, turnSpeed);
+        }
+    }
+
+    private void HandleTeleportation()
+    {
+        if (teleportMarkerPrefab == null) return;
+
+        // Aiming Phase (Right Stick Forward)
+        if (OVRInput.Get(teleportButton))
+        {
+            if (Physics.Raycast(OVRInput.GetLocalControllerPosition(OVRInput.Controller.RTouch), OVRInput.GetLocalControllerRotation(OVRInput.Controller.RTouch) * Vector3.forward, out RaycastHit hit, maxTeleportDistance, teleportSurfaceMask))
+            {
+                _teleportMarkerInstance.SetActive(true);
+                _teleportMarkerInstance.transform.position = hit.point;
+                _isTeleportTargetValid = true;
+            }
+            else
+            {
+                _teleportMarkerInstance.SetActive(false);
+                _isTeleportTargetValid = false;
+            }
+        }
+
+        // Teleport Execution (Button Release)
+        if (OVRInput.GetUp(teleportButton))
+        {
+            if (_isTeleportTargetValid)
+            {
+                Vector3 teleportPos = _teleportMarkerInstance.transform.position;
+                // Adjust position to account for character controller height
+                teleportPos.y = transform.position.y;
+                transform.position = teleportPos;
+            }
+            _teleportMarkerInstance.SetActive(false);
+        }
+    }
+}
+```
+*   ⬜ **2.4** Add the **`SimpleRigLocomotion`** script to the `PlayerRig` GameObject.
+*   ⬜ **2.5** Create a simple teleport marker (e.g., a flattened Cylinder), save it as a prefab in `Assets/_Prefabs`, and assign it to the **Teleport Marker Prefab** field.
+*   ⬜ **2.6** Set the **Teleport Surface Mask** to **Default**.
+
+### 3) Add Interaction Capabilities
+*   ⬜ **3.1** In the Hierarchy, find `OVRCameraRig/TrackingSpace/LeftHandAnchor` and `RightHandAnchor`.
+*   ⬜ **3.2** To both `LeftHandAnchor` and `RightHandAnchor`, add the **`OVR Controller Helper`** component. This provides visual controller models.
+*   ⬜ **3.3** To both anchors, also add the **`OVR Hand`** component. This enables hand tracking visuals.
+*   ⬜ **3.4** Create empty GameObjects named `Interaction` as children of both hand anchors.
+*   ⬜ **3.5** To both `Interaction` objects, add a **`Ray Interactor`** component and a **`Grab Interactor`** component.
+    *   **Why:** The `Ray Interactor` allows pointing and selecting distant objects/UI. The `Grab Interactor` allows for direct, physics-based grabbing of nearby objects.
+
+---
+## 📦 End-of-Part 2 Snapshot
+**Hierarchy:**
+```
+PlayerRig (CharacterController, SimpleRigLocomotion)
+└─ OVRCameraRig
+   └─ TrackingSpace
+      ├─ LeftHandAnchor (OVR Controller Helper, OVR Hand)
+      │  └─ Interaction (Ray Interactor, Grab Interactor)
+      └─ RightHandAnchor (OVR Controller Helper, OVR Hand)
+         └─ Interaction (Ray Interactor, Grab Interactor)
+Directional Light
+```
+**Configuration Summary:**
+*   A `PlayerRig` is set up with a `CharacterController` for physics.
+*   The `SimpleRigLocomotion` script provides smooth movement, snap turning, and teleportation.
+*   Both hands are equipped with ray and grab interactors, ready for interaction.
+
+---
+---
+
+# 🔹 Part 3/5 — Scene UI & Board Creation
+
+**Goal:** Build the physical game environment and the interactive world-space UI for the Tic-Tac-Toe board.
+
+## 🧭 Flow Map
+*   **Hierarchy** → Create the `Wall` and `Ground` planes.
+*   **Hierarchy / Inspector** → Create and configure the world-space `BoardCanvas` and its `Grid Layout Group`.
+*   **Project Window / Hierarchy** → Create the `Cell` prefab and populate the grid.
+*   **Hierarchy / Inspector** → Configure the `EventSystem` to work with VR controllers.
 
 ---
 
-# 🔹 Part 3/5 — Core Gameplay Logic
+## ✅ To-Do Checklist
 
-**Goal:** Implement a robust, data-driven game logic where the state is managed centrally and UI is updated in response.
+### 1) Create the Physical Environment
+*   ⬜ **1.1** In the `TicTacToe` scene, create a large plane for the ground: **Hierarchy → 3D Object → Plane**. Rename it `Ground`, set its **Scale** to (5, 1, 5).
+*   ⬜ **1.2** Create a wall to mount the board on: **Hierarchy → 3D Object → Cube**. Rename it `Wall`.
+*   ⬜ **1.3** Set the `Wall`'s Transform:
+    *   • **Position:** (0, 1.5, 3)
+    *   • **Scale:** (4, 2.5, 0.1)
+    *   **Why:** A physical environment grounds the player in the VR space and gives context to the world-space UI.
+
+### 2) Build the World-Space UI Board
+*   ⬜ **2.1** Right-click the `Wall` in the Hierarchy and select **UI → Canvas**. Rename the new canvas `BoardCanvas`.
+*   ⬜ **2.2** In the Inspector for `BoardCanvas`, configure the following:
+    *   • **Render Mode:** `World Space`.
+    *   • **Rect Transform → Pos Z:** `-0.06` (to bring it slightly in front of the wall).
+    *   • **Rect Transform → Width:** `800`, **Height:** `800`.
+    *   • **Rect Transform → Scale:** (0.0015, 0.0015, 0.0015).
+*   ⬜ **2.3** Add the **`OVR Raycaster`** component to the `BoardCanvas`. Set its **Blocking Objects** to **None**.
+    *   **Why:** A world-space canvas exists as an object in the 3D scene. The `OVR Raycaster` is essential for allowing VR controller rays to interact with its UI elements.
+
+### 3) Construct the 3x3 Grid
+*   ⬜ **3.1** Right-click `BoardCanvas` → **UI → Panel**. Rename it `GridPanel`.
+*   ⬜ **3.2** In the `GridPanel`'s Rect Transform, hold **Alt+Shift** and click the bottom-right "stretch" icon to make it fill the entire canvas.
+*   ⬜ **3.3** Add a **Grid Layout Group** component to `GridPanel`. Configure it:
+    *   • **Padding:** Left `20`, Right `20`, Top `20`, Bottom `20`.
+    *   • **Cell Size:** `(240, 240)`.
+    *   • **Spacing:** `(20, 20)`.
+    *   • **Constraint:** `Fixed Column Count`, **Constraint Count:** `3`.
+    *   **Why:** The `Grid Layout Group` is a powerful tool that automatically arranges its child elements into a grid, saving us from having to place each cell manually.
+
+### 4) Create the Cell Prefab
+*   ⬜ **4.1** Right-click `GridPanel` → **UI → Button (TextMeshPro)**. Rename it `Cell`.
+*   ⬜ **4.2** Select the `Text (TMP)` child of the `Cell` and set its **Font Size** to `180` and **Alignment** to **Center**.
+*   ⬜ **4.3** Drag the `Cell` GameObject from the Hierarchy into `Assets/_Prefabs` to create a prefab.
+*   ⬜ **4.4** **Delete** the original `Cell` from the Hierarchy.
+*   ⬜ **4.5** Drag the new **`Cell` prefab** from the Project window into the `GridPanel` in the Hierarchy **nine times**. The grid will automatically arrange them.
+    *   **Why:** Using a prefab is fundamental to good Unity practice. It allows us to make changes to one `Cell` prefab and have those changes apply to all nine instances instantly.
+
+### 5) Finalize UI Interactivity
+*   ⬜ **5.1** In the Hierarchy, select the `EventSystem` GameObject.
+*   ⬜ **5.2** In the Inspector, click **Remove Component** to delete the `Standalone Input Module`.
+*   ⬜ **5.3** Click **Add Component** and add the **`OVR Input Module`**.
+    *   **Why:** The default `Standalone Input Module` is designed for mouse and keyboard. The `OVR Input Module` is specifically designed to translate input from VR controllers (like trigger presses) into UI events that components like Buttons can understand.
+
+---
+## 📦 End-of-Part 3 Snapshot
+**Hierarchy:**
+```
+PlayerRig
+└─ OVRCameraRig
+   └─ ...
+Wall
+└─ BoardCanvas (OVR Raycaster)
+   └─ GridPanel (Grid Layout Group)
+      ├─ Cell (Prefab)
+      ├─ Cell (1) (Prefab)
+      ├─ ... (up to 9)
+Ground
+EventSystem (OVR Input Module)
+Directional Light
+```
+**Configuration Summary:**
+*   A physical wall and ground are in the scene.
+*   A world-space `BoardCanvas` is set up with a `Grid Layout Group`.
+*   The grid is populated with nine instances of a `Cell` prefab.
+*   The `EventSystem` is configured for VR interaction.
+
+---
+---
+
+# 🔹 Part 4/5 — Core Gameplay Logic
+
+**Goal:** Implement the brain of the game using a robust, data-driven architecture. The `GameController` will manage the game state, while `Cell` components will simply report user input.
+
+## 🧭 Flow Map
+*   **Project Window** → Create the `GameController` and `Cell` C# scripts.
+*   **Visual Studio / Code Editor** → Write the C# logic for both scripts.
+*   **Hierarchy / Inspector** → Create a `GameManager` object, attach `GameController`, and wire up all UI references.
+*   **Project Window / Inspector** → Add the `Cell` script to the `Cell` prefab.
+
+---
 
 ## ✅ To-Do Checklist
 
 ### 1) Create the Core Scripts
-* ⬜ **1.1** In `Assets/_Scripts`, create a new folder named `TicTacToe`.
-* ⬜ **1.2** Inside this folder, create two C# scripts: `GameController.cs` and `Cell.cs`.
+*   ⬜ **1.1** In `Assets/_Scripts`, create a new subfolder named `TicTacToe`.
+*   ⬜ **1.2** Inside this folder, create two C# scripts: `GameController.cs` and `Cell.cs`.
 
 ### 2) Code the `Cell.cs` Script
-* ⬜ **2.1** Open `Cell.cs` and replace its content with the following:
+*   ⬜ **2.1** Open `Cell.cs`. This script will be very simple; its only job is to tell the `GameController` when it has been clicked. Paste this code:
 ```csharp
 using UnityEngine;
 using UnityEngine.UI;
@@ -136,6 +365,7 @@ public class Cell : MonoBehaviour
 
     private void OnCellClicked()
     {
+        // Notify the central controller that this specific cell was clicked.
         if (_gameController != null)
         {
             _gameController.OnCellClicked(_cellIndex);
@@ -143,10 +373,11 @@ public class Cell : MonoBehaviour
     }
 }
 ```
-* ⬜ **2.2** Open the **`Cell` prefab** and add the **`Cell` script** to it. Save the prefab.
+*   ⬜ **2.2** Open the **`Cell` prefab** for editing (double-click it in the Project window).
+*   ⬜ **2.3** Add the **`Cell.cs` script** to the root of the prefab. Save the prefab. All nine instances in the scene will now have this script.
 
 ### 3) Code the `GameController.cs` Script
-* ⬜ **3.1** Open `GameController.cs` and replace its content with this code:
+*   ⬜ **3.1** Open `GameController.cs`. This script will manage everything: the board state, player turns, win checks, and UI updates. Paste this code:
 ```csharp
 using UnityEngine;
 using UnityEngine.UI;
@@ -154,21 +385,20 @@ using TMPro;
 
 public class GameController : MonoBehaviour
 {
-    [Header("Board & Cells")]
+    [Header("UI & Board References")]
+    [Tooltip("Assign the 9 Cell buttons from the hierarchy, in order 0-8.")]
     public Button[] cellButtons = new Button[9];
-
-    [Header("Game State")]
-    private int[] boardState = new int[9]; // 0=Empty, 1=X, 2=O
-    private int currentPlayer = 1;
-    private int movesMade = 0;
-    private bool isGameActive = true;
-
-    [Header("UI Panels & Text")]
     public GameObject gameOverPanel;
     public TMP_Text gameOverText;
     public Button restartButton;
 
-    private readonly int[][] winConditions =
+    // --- Game State ---
+    private int[] _boardState = new int[9]; // 0=Empty, 1=X, 2=O
+    private int _currentPlayer = 1;
+    private int _movesMade = 0;
+    private bool _isGameActive = true;
+
+    private readonly int[][] _winConditions =
     {
         new[] {0, 1, 2}, new[] {3, 4, 5}, new[] {6, 7, 8}, // Rows
         new[] {0, 3, 6}, new[] {1, 4, 7}, new[] {2, 5, 8}, // Columns
@@ -177,17 +407,13 @@ public class GameController : MonoBehaviour
 
     void Start()
     {
-        // Add listeners for UI buttons
+        // The Cell scripts will report clicks, so we just need to listen for the restart button.
         restartButton.onClick.AddListener(RestartGame);
 
-        // Initialize each cell with its index and a reference to this controller
+        // Initialize each Cell with its index and a reference to this controller.
         for (int i = 0; i < cellButtons.Length; i++)
         {
-            Cell cell = cellButtons[i].GetComponent<Cell>();
-            if (cell != null)
-            {
-                cell.Initialize(i, this);
-            }
+            cellButtons[i].GetComponent<Cell>()?.Initialize(i, this);
         }
 
         RestartGame();
@@ -195,14 +421,14 @@ public class GameController : MonoBehaviour
 
     public void RestartGame()
     {
-        isGameActive = true;
-        currentPlayer = 1;
-        movesMade = 0;
+        _isGameActive = true;
+        _currentPlayer = 1;
+        _movesMade = 0;
 
-        for (int i = 0; i < boardState.Length; i++)
+        for (int i = 0; i < _boardState.Length; i++)
         {
-            boardState[i] = 0;
-            UpdateCellUI(i);
+            _boardState[i] = 0; // Clear internal state
+            UpdateCellUI(i);    // Update visual
             cellButtons[i].interactable = true;
         }
 
@@ -211,35 +437,35 @@ public class GameController : MonoBehaviour
 
     public void OnCellClicked(int cellIndex)
     {
-        if (!isGameActive || boardState[cellIndex] != 0) return;
+        if (!_isGameActive || _boardState[cellIndex] != 0) return;
 
-        boardState[cellIndex] = currentPlayer;
-        movesMade++;
+        _boardState[cellIndex] = _currentPlayer;
+        _movesMade++;
 
         UpdateCellUI(cellIndex);
         cellButtons[cellIndex].interactable = false;
 
         if (CheckForWin())
         {
-            EndGame(false);
+            EndGame(isTie: false);
         }
-        else if (movesMade >= 9)
+        else if (_movesMade >= 9)
         {
-            EndGame(true); // Tie
+            EndGame(isTie: true);
         }
         else
         {
-            currentPlayer = (currentPlayer == 1) ? 2 : 1;
+            _currentPlayer = (_currentPlayer == 1) ? 2 : 1;
         }
     }
 
     private bool CheckForWin()
     {
-        foreach (var condition in winConditions)
+        foreach (var condition in _winConditions)
         {
-            if (boardState[condition[0]] != 0 &&
-                boardState[condition[0]] == boardState[condition[1]] &&
-                boardState[condition[0]] == boardState[condition[2]])
+            if (_boardState[condition[0]] != 0 &&
+                _boardState[condition[0]] == _boardState[condition[1]] &&
+                _boardState[condition[0]] == _boardState[condition[2]])
             {
                 return true;
             }
@@ -249,9 +475,9 @@ public class GameController : MonoBehaviour
 
     private void EndGame(bool isTie)
     {
-        isGameActive = false;
+        _isGameActive = false;
         gameOverPanel.SetActive(true);
-        gameOverText.text = isTie ? "It's a Tie!" : $"Player {(currentPlayer == 1 ? "X" : "O")} Wins!";
+        gameOverText.text = isTie ? "It's a Tie!" : $"Player {(_currentPlayer == 1 ? "X" : "O")} Wins!";
     }
 
     private void UpdateCellUI(int cellIndex)
@@ -259,7 +485,7 @@ public class GameController : MonoBehaviour
         TMP_Text textComponent = cellButtons[cellIndex].GetComponentInChildren<TMP_Text>();
         if (textComponent != null)
         {
-            switch (boardState[cellIndex])
+            switch (_boardState[cellIndex])
             {
                 case 1: textComponent.text = "X"; break;
                 case 2: textComponent.text = "O"; break;
@@ -271,27 +497,60 @@ public class GameController : MonoBehaviour
 ```
 
 ### 4) Wire the `GameController` in the Scene
-* ⬜ **4.1** Create an empty GameObject in the Hierarchy named `GameManager`.
-* ⬜ **4.2** Add the **`GameController.cs`** script to `GameManager`.
-* ⬜ **4.3** In the Inspector, lock the `GameManager` view (top-right lock icon).
-* ⬜ **4.4** In the Hierarchy, select all nine `Cell_` objects and drag them onto the **Cell Buttons** array field in the `GameController`.
-* ⬜ **4.5** Create the Game Over UI:
-    * • Right-click `BoardCanvas` → **UI → Panel**. Rename it `GameOverPanel`.
-    * • Inside `GameOverPanel`, add a **TextMeshPro - Text** for the status and a **Button** to restart.
-* ⬜ **4.6** Drag the `GameOverPanel`, its text, and its restart button into the corresponding fields on the `GameController`.
-* ⬜ **4.7** Disable the `GameOverPanel` in the Hierarchy.
+*   ⬜ **4.1** In the Hierarchy, create an empty GameObject and name it `GameManager`.
+*   ⬜ **4.2** Add the **`GameController.cs`** script to the `GameManager` object.
+*   ⬜ **4.3** Create the Game Over UI:
+    *   • Right-click `BoardCanvas` → **UI → Panel**. Rename it `GameOverPanel`.
+    *   • Make it fill the screen and give it a semi-transparent background color.
+    *   • Inside `GameOverPanel`, add a **TextMeshPro - Text** for the status (`GameOverText`) and a **Button (TextMeshPro)** to restart (`RestartButton`).
+*   ⬜ **4.4** Select the `GameManager`. In the Inspector, lock the view (top-right lock icon).
+*   ⬜ **4.5** Drag all nine `Cell` GameObjects from the Hierarchy onto the **Cell Buttons** array field.
+*   ⬜ **4.6** Drag the `GameOverPanel`, `GameOverText`, and `RestartButton` into their respective fields.
+*   ⬜ **4.7** **Disable** the `GameOverPanel` in the Hierarchy so it's hidden at the start.
+
+---
+## 📦 End-of-Part 4 Snapshot
+**Hierarchy:**
+```
+PlayerRig
+└─ ...
+Wall
+└─ BoardCanvas
+   ├─ GridPanel
+   │  └─ Cell (x9)
+   └─ GameOverPanel (disabled)
+      ├─ GameOverText
+      └─ RestartButton
+Ground
+EventSystem
+GameManager (GameController script)
+Directional Light
+```
+**Configuration Summary:**
+*   `GameManager` holds the `GameController` script, which is now wired to all `Cell` buttons and the `GameOverPanel`.
+*   The `Cell` prefab now has the `Cell.cs` script, which automatically handles its own click events.
+*   The core game loop is functional: players can take turns, and the game correctly identifies a win or a tie.
+
+---
+---
+
+# 🔹 Part 5/5 — UX Polish & Advanced Features
+
+**Goal:** Elevate the project from a functional prototype to a polished game by adding sensory feedback (hover effects, haptics, audio) and advanced gameplay features (HUD, scoring, undo).
+
+## 🧭 Flow Map
+*   **Project Window / Inspector** → Create and add the `CellHoverScale` script to the `Cell` prefab.
+*   **Code Editor** → Add audio, haptics, and new feature logic to `GameController.cs`.
+*   **Hierarchy / Inspector** → Build the HUD UI elements and wire them to the `GameController`.
+*   **Project Window** → Import audio clips.
 
 ---
 
-# 🔹 Part 4/5 — UX Polish (Haptics, Audio & Hover Effects)
-
-**Goal:** Enhance the user experience with sensory feedback for clicks, wins, and hover states.
-
 ## ✅ To-Do Checklist
 
-### 1) Add Hover Effect
-* ⬜ **1.1** Create a new script `Assets/_Scripts/TicTacToe/CellHoverScale.cs`.
-* ⬜ **1.2** Paste this code:
+### 1) Add Visual Hover Feedback
+*   ⬜ **1.1** In `Assets/_Scripts/TicTacToe`, create a new C# script named `CellHoverScale.cs`.
+*   ⬜ **1.2** Paste this code. It makes the cell slightly larger when a player's ray points at it.
 ```csharp
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -306,57 +565,44 @@ public class CellHoverScale : MonoBehaviour, IPointerEnterHandler, IPointerExitH
     public void OnPointerExit(PointerEventData eventData) => transform.localScale = _initialScale;
 }
 ```
-* ⬜ **1.3** Open the **`Cell` prefab** and add the **`CellHoverScale`** script to it.
+*   ⬜ **1.3** Open the **`Cell` prefab** and add the **`CellHoverScale`** script to it. Save the prefab.
 
-### 2) Add Haptics and Audio
-* ⬜ **2.1** In `GameController.cs`, add these fields:
+### 2) Implement Haptics and Audio
+*   ⬜ **2.1** In `GameController.cs`, add a new header and fields for audio clips and the Audio Source component:
 ```csharp
 [Header("Audio & Haptics")]
 public AudioSource audioSource;
 public AudioClip clickClip;
 public AudioClip winClip;
 ```
-* ⬜ **2.2** In `GameController.cs`, add this haptics helper method:
+*   ⬜ **2.2** Add a helper method to `GameController.cs` to trigger haptics.
 ```csharp
-private void TriggerHaptics(float amplitude, float duration)
+private void TriggerHaptics(OVRInput.Controller controller, float amplitude, float duration)
 {
-    OVRInput.SetControllerVibration(1, amplitude, OVRInput.Controller.RTouch);
+    OVRInput.SetControllerVibration(1, amplitude, controller);
     Invoke(nameof(StopHaptics), duration);
 }
-
-private void StopHaptics()
-{
-    OVRInput.SetControllerVibration(0, 0, OVRInput.Controller.RTouch);
-}
+private void StopHaptics() => OVRInput.SetControllerVibration(0, 0, OVRInput.Controller.Active);
 ```
-* ⬜ **2.3** In `OnCellClicked()`, after updating the state, call:
+*   ⬜ **2.3** In `OnCellClicked()`, after updating the game state, add calls to play a sound and trigger a short haptic pulse.
 ```csharp
+// Inside OnCellClicked, after _movesMade++
 audioSource.PlayOneShot(clickClip);
-TriggerHaptics(0.2f, 0.1f);
+TriggerHaptics(OVRInput.Controller.Active, 0.2f, 0.1f);
 ```
-* ⬜ **2.4** In `EndGame()`, after showing the panel, call:
+*   ⬜ **2.4** In `EndGame()`, add calls to play the win sound and a stronger haptic pulse.
 ```csharp
+// Inside EndGame, after setting gameOverText.text
 audioSource.PlayOneShot(winClip);
-TriggerHaptics(0.5f, 0.3f);
+TriggerHaptics(OVRInput.Controller.Active, 0.5f, 0.3f);
 ```
-* ⬜ **2.5** On the `GameManager` object, add an **Audio Source** component.
-* ⬜ **2.6** Import two sound clips (`click.wav`, `win.wav`) and assign them and the Audio Source to the `GameController`'s fields in the Inspector.
+*   ⬜ **2.5** On the `GameManager` object, add an **Audio Source** component.
+*   ⬜ **2.6** Import two sound clips into `Assets/_Audio` (e.g., a simple click and a win sound).
+*   ⬜ **2.7** In the Inspector for `GameManager`, assign the **Audio Source** component and the two audio clips to the new fields on the `GameController`.
 
----
-
-# 🔹 Part 5/5 — Advanced Features (HUD, Undo, Scoring & Debugging)
-
-**Goal:** Add a persistent Heads-Up Display (HUD), an undo feature, scoring across rounds, and a debug overlay to create a complete game loop.
-
-## ✅ To-Do Checklist
-
-### 1) Build the HUD
-* ⬜ **1.1** On the `BoardCanvas`, create a new **Panel** named `HUDPanel`. Anchor it to the top.
-* ⬜ **1.2** Inside `HUDPanel`, add **TextMeshPro - Text** elements for: `TurnText`, `ScoreText`, and `RoundText`.
-* ⬜ **1.3** Add two **Buttons**: `UndoButton` and `ResetAllButton`.
-
-### 2) Extend `GameController.cs` for Advanced Features
-* ⬜ **2.1** Add new fields to `GameController` for the HUD elements, scores, and move history:
+### 3) Build the HUD and Add Advanced Gameplay Features
+*   ⬜ **3.1** In the Hierarchy, create a `HUDPanel` under the `BoardCanvas` (anchor it to the top). Inside it, add TextMeshPro elements for `TurnText`, `ScoreText`, `RoundText`, and two buttons: `UndoButton` and `ResetAllButton`.
+*   ⬜ **3.2** In `GameController.cs`, add fields for all the new HUD elements, score/round counters, and a move history stack.
 ```csharp
 [Header("HUD UI")]
 public TMP_Text turnText;
@@ -365,42 +611,42 @@ public TMP_Text roundText;
 public Button undoButton;
 public Button resetAllButton;
 
-private int scoreX = 0;
-private int scoreO = 0;
-private int currentRound = 1;
-private System.Collections.Generic.Stack<int> moveHistory = new System.Collections.Generic.Stack<int>();
+// Game Stats
+private int _scoreX = 0;
+private int _scoreO = 0;
+private int _currentRound = 1;
+private System.Collections.Generic.Stack<int> _moveHistory = new();
 ```
-* ⬜ **2.2** Create a new `UpdateHUD()` method to refresh all text elements and call it whenever the state changes (e.g., in `RestartGame`, `OnCellClicked`, `EndGame`).
-* ⬜ **2.3** Implement `UndoLastMove()`:
+*   ⬜ **3.3** Create a new `UpdateHUD()` method in `GameController` to refresh all text elements. Call this method whenever the state changes (e.g., at the end of `RestartGame`, `OnCellClicked`, `EndGame`, and `UndoLastMove`).
+*   ⬜ **3.4** Implement the `UndoLastMove()` method.
 ```csharp
 public void UndoLastMove()
 {
-    if (moveHistory.Count == 0 || !isGameActive) return;
-    int lastMove = moveHistory.Pop();
-    boardState[lastMove] = 0;
-    movesMade--;
+    if (_moveHistory.Count == 0 || !_isGameActive) return;
+
+    int lastMove = _moveHistory.Pop();
+    _boardState[lastMove] = 0;
+    _movesMade--;
     cellButtons[lastMove].interactable = true;
-    currentPlayer = (currentPlayer == 1) ? 2 : 1;
+    _currentPlayer = (_currentPlayer == 1) ? 2 : 1; // Switch turn back
+
     UpdateCellUI(lastMove);
     UpdateHUD();
 }
 ```
-* ⬜ **2.4** Implement `ResetAllStats()` to reset scores and rounds.
-* ⬜ **2.5** In `OnCellClicked()`, push the `cellIndex` to `moveHistory`.
-* ⬜ **2.6** In `EndGame()`, increment the score for the winning player.
-* ⬜ **2.7** Wire up the `UndoButton` and `ResetAllButton`'s `onClick` events in the `Start()` method.
-
-### 3) Add a Debug Overlay
-* ⬜ **3.1** Create a new script `DebugOverlay.cs` that reads the private state of `GameController` using reflection and displays it on a toggleable panel.
-* ⬜ **3.2** Create a new panel and text object on the `BoardCanvas` for the debug info.
-* ⬜ **3.3** Add a "Debug" button to the HUD to toggle the `DebugPanel`'s visibility.
+*   ⬜ **3.5** In `OnCellClicked()`, push the `cellIndex` to the `_moveHistory` stack.
+*   ⬜ **3.6** In `EndGame()`, increment the appropriate score variable (`_scoreX` or `_scoreO`) if it's not a tie.
+*   ⬜ **3.7** In the `Start()` method, add listeners for the `undoButton` and `resetAllButton`'s `onClick` events.
+*   ⬜ **3.8** Wire up all the new HUD UI references in the Inspector on the `GameManager`.
 
 ### 4) Final Playtest
-* ⬜ **4.1** Test all features:
-    * • Does the HUD update correctly?
-    * • Does the Undo button work as expected?
-    * • Does the score increment across rounds?
-    * • Does the Reset All button clear all stats?
-    * • Does the Debug panel show the correct internal state?
+*   ⬜ **4.1** Enter Play mode and test all features:
+    *   **Hover & Click:** Do cells scale up and play sounds/haptics?
+    *   **HUD:** Does the turn, score, and round text update correctly?
+    *   **Undo:** Does the undo button correctly revert the last move?
+    *   **Scoring:** Does the score update correctly after a win and persist into the next round?
+    *   **Reset:** Does the reset button clear all scores and rounds?
 
-Congratulations! You have successfully built a complete, feature-rich Tic-Tac-Toe game in VR, following modern development practices.
+---
+## 🏆 Congratulations!
+You have successfully built a complete, feature-rich, and polished Tic-Tac-Toe game in VR. You've learned how to set up a modern Unity VR project, implement a robust player rig, build interactive world-space UI, and architect clean, data-driven gameplay logic. You can now use these skills as a foundation for creating even more complex and exciting VR experiences.
